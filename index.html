@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peta Politik Indonesia 2024 - Dashboard Interaktif Pilpres 2029</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #fdfdfd; }
+  #map { height: 65vh; width: 100%; border-radius: 16px; border: 1px solid #fee2e2; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+  .party-legend { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; font-weight: 500; }
+  .color-box { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .province-row { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border-left: 3px solid transparent; }
+  .province-row:hover { background-color: #fff1f2 !important; border-left-color: #dc2626; transform: translateX(2px); }
+  .party-bar { height: 6px; border-radius: 3px; margin-top: 4px; background: #f1f5f9; position: relative; overflow: hidden; }
+  .party-bar-fill { height: 100%; border-radius: 3px; }
+  .leaflet-popup-content-wrapper { border-radius: 16px; border: none; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+  .tab-active { border-bottom: 3px solid #dc2626; color: #dc2626; font-weight: 800; background: #fff1f2; }
+  .tab-inactive { border-bottom: 3px solid transparent; color: #64748b; font-weight: 600; }
+  .tab-inactive:hover { color: #dc2626; background: #fef2f2; }
+  .badge { font-size: 10px; padding: 4px 10px; border-radius: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.025em; }
+  .card-premium { background: white; border-radius: 20px; border: 1px solid #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 10px 20px -5px rgba(0,0,0,0.03); transition: all 0.3s ease; }
+  .card-premium:hover { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); transform: translateY(-2px); }
+  .btn-primary-red { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25); }
+  .btn-primary-red:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(220, 38, 38, 0.35); }
+  .btn-outline-red { border: 2px solid #dc2626; color: #dc2626; background: transparent; }
+  .btn-outline-red:hover { background: #fef2f2; }
+  .scroll-hidden::-webkit-scrollbar { width: 5px; }
+  .scroll-hidden::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .scroll-hidden::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body class="bg-slate-50">
+
+<!-- Header -->
+<div class="sticky top-0 z-[1001] bg-red-950/90 backdrop-blur-xl border-b border-white/5 shadow-2xl">
+  <div class="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-6">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md">
+        <span class="text-xl">🇮🇩</span>
+      </div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-extrabold text-white tracking-tight leading-none">Peta Politik Indonesia <span class="text-white/80">2024</span></h1>
+        <p class="text-[9px] font-black text-white/60 uppercase tracking-[0.2em] mt-1">Dashboard Analisis Legislatif & Eksekutif</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <div class="flex bg-black/10 rounded-2xl p-1 border border-white/10">
+        <button id="btn-dpr" onclick="setLevel('DPR_RI')" class="px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2">
+          DPR RI
+        </button>
+        <button id="btn-dprd" onclick="setLevel('DPRD_TK1')" class="px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2">
+          DPRD TK I
+        </button>
+      </div>
+      
+      <button onclick="toggleAnggotaModal()" class="px-6 py-2.5 bg-white text-red-700 hover:bg-red-50 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 shadow-md">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Daftar Anggota
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="max-w-7xl mx-auto px-6 mt-8">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="card-premium p-5 text-center group">
+      <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors group-hover:bg-red-600 group-hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      </div>
+      <div class="text-2xl font-extrabold text-slate-900" id="stat-total-kursi">-</div>
+      <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Total Kursi</div>
+    </div>
+    
+    <div class="card-premium p-5 text-center group">
+      <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors group-hover:bg-red-600 group-hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7"/></svg>
+      </div>
+      <div class="text-2xl font-extrabold text-slate-900" id="stat-total-prov">38</div>
+      <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Provinsi</div>
+    </div>
+
+    <div class="card-premium p-5 text-center group">
+      <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors group-hover:bg-red-600 group-hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+      </div>
+      <div class="text-lg font-extrabold text-slate-900 truncate" id="stat-top-party">-</div>
+      <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Partai Terkuat</div>
+    </div>
+
+    <div class="card-premium p-5 text-center group">
+      <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors group-hover:bg-red-600 group-hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+      </div>
+      <div class="text-2xl font-extrabold text-slate-900" id="stat-partai-count">-</div>
+      <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Jumlah Partai</div>
+    </div>
+
+    <div class="card-premium p-5 text-center group">
+      <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors group-hover:bg-red-600 group-hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      </div>
+      <div class="text-lg font-extrabold text-slate-900 truncate" id="stat-competitive">-</div>
+      <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Paling Kompetitif</div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="max-w-7xl mx-auto px-6 mt-8 mb-12">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Map -->
+    <div class="lg:col-span-2">
+      <div class="card-premium p-6">
+        <div class="flex justify-between items-center mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-2 h-8 bg-red-600 rounded-full"></div>
+            <h2 class="text-xl font-extrabold text-slate-900" id="map-title">Peta Dominasi Partai - DPR RI</h2>
+          </div>
+          <div class="text-[10px] font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 uppercase tracking-wider">Interaktif</div>
+        </div>
+        <div id="map"></div>
+        <div class="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-slate-500 font-semibold border-t border-slate-50 pt-4">
+          <span class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-slate-200"></div> Tidak ada data</span>
+          <span class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-red-600"></div> PDI Perjuangan</span>
+          <span class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-yellow-500"></div> Golkar</span>
+          <span class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-yellow-700"></div> Gerindra</span>
+          <span class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-blue-800"></div> NasDem</span>
+          <span class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-green-700"></div> PKS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="lg:col-span-1 space-y-4">
+      <!-- Party Ranking -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Klasemen Partai Nasional
+        </h3>
+        <div id="legend-container" class="space-y-1 max-h-72 overflow-y-auto scroll-hidden"></div>
+      </div>
+
+      <!-- Top Provinces -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Top 10 Provinsi (Kursi Terbanyak)
+        </h3>
+        <div id="top-provinces" class="space-y-1.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <h3 class="font-bold text-gray-800 mb-3">Distribusi Kursi Nasional</h3>
+      <div class="relative h-64"><canvas id="chart-national"></canvas></div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <h3 class="font-bold text-gray-800 mb-3">Top 12 Partai - Jumlah Kursi</h3>
+      <div class="relative h-64"><canvas id="chart-top-parties"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Province Detail -->
+  <div id="province-detail" class="hidden mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-2xl font-black text-gray-800" id="detail-province-name">Provinsi</h2>
+        <p class="text-sm text-gray-500 mt-1" id="detail-level">DPR RI</p>
+      </div>
+      <button onclick="closeDetail()" class="text-gray-400 hover:text-red-600 text-2xl leading-none p-1">&times;</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="md:col-span-1">
+        <div class="relative h-60"><canvas id="chart-province-pie"></canvas></div>
+      </div>
+      <div class="md:col-span-2">
+        <h4 class="font-bold text-gray-700 mb-3">Daftar Partai & Kursi</h4>
+        <div id="detail-party-list" class="space-y-2 max-h-72 overflow-y-auto scroll-hidden pr-1"></div>
+      </div>
+    </div>
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-red-50 rounded-lg p-3 text-center">
+        <div class="text-xl font-black text-red-700" id="detail-total-kursi">-</div>
+        <div class="text-xs text-gray-600">Total Kursi</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3 text-center">
+        <div class="text-xl font-black text-blue-700" id="detail-dominant-party">-</div>
+        <div class="text-xs text-gray-600">Partai Dominan</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3 text-center">
+        <div class="text-xl font-black text-green-700" id="detail-dominant-kursi">-</div>
+        <div class="text-xs text-gray-600">Kursi Dominan</div>
+      </div>
+      <div class="bg-purple-50 rounded-lg p-3 text-center">
+        <div class="text-xl font-black text-purple-700" id="detail-party-count">-</div>
+        <div class="text-xs text-gray-600">Jumlah Partai</div>
+      </div>
+    </div>
+    <div class="mt-5 border-t pt-4">
+      <h4 class="font-bold text-gray-800 mb-3">Perbandingan Kursi: DPR RI vs DPRD TK I</h4>
+      <div class="relative h-56"><canvas id="chart-compare"></canvas></div>
+    </div>
+    <div class="mt-5 border-t pt-4">
+      <h4 class="font-bold text-gray-800 mb-3">📊 Perbandingan Perolehan Suara per Partai (DPR RI vs DPRD TK I)</h4>
+      <p class="text-xs text-gray-500 mb-2">Menampilkan perolehan suara setiap partai di provinsi ini untuk kedua tingkatan. Partai dengan selisih besar perlu menjadi atensi khusus.</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
+              <th class="px-3 py-2 text-left font-semibold">Partai</th>
+              <th class="px-3 py-2 text-right font-semibold">Suara DPR RI</th>
+              <th class="px-3 py-2 text-right font-semibold">Suara DPRD TK I</th>
+              <th class="px-3 py-2 text-right font-semibold">Selisih Suara</th>
+              <th class="px-3 py-2 text-right font-semibold">% Selisih</th>
+              <th class="px-3 py-2 text-center font-semibold">Kursi DPR</th>
+              <th class="px-3 py-2 text-center font-semibold">Kursi DPRD</th>
+              <th class="px-3 py-2 text-center font-semibold">Atensi</th>
+            </tr>
+          </thead>
+          <tbody id="detail-vote-compare-body" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vote Comparison Section -->
+  <div class="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+      <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      📊 Analisis Perbandingan Suara: DPR RI vs DPRD TK I
+    </h3>
+    <p class="text-sm text-gray-500 mb-3">Perbandingan total perolehan suara per partai secara nasional. Selisih menunjukkan perbedaan elektabilitas partai antara pemilihan legislatif nasional (DPR RI) dan provinsi (DPRD TK I).</p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div>
+        <h4 class="font-semibold text-gray-700 mb-2 text-sm">Top 15 Partai - Perbandingan Suara</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
+                <th class="px-2 py-2 text-left font-semibold">Partai</th>
+                <th class="px-2 py-2 text-right font-semibold">Suara DPR RI</th>
+                <th class="px-2 py-2 text-right font-semibold">Suara DPRD</th>
+                <th class="px-2 py-2 text-right font-semibold">Selisih</th>
+                <th class="px-2 py-2 text-center font-semibold">Tren</th>
+              </tr>
+            </thead>
+            <tbody id="vote-compare-table-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h4 class="font-semibold text-gray-700 mb-2 text-sm">Grafik Perbandingan Suara (Top 12)</h4>
+        <div class="relative h-80"><canvas id="chart-vote-compare"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Province Table -->
+  <div class="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+      <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+      Tabel Lengkap per Provinsi
+    </h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
+            <th class="px-3 py-2 text-left font-semibold cursor-pointer hover:bg-gray-100" onclick="sortTable('name')">Provinsi ↕</th>
+            <th class="px-3 py-2 text-center font-semibold cursor-pointer hover:bg-gray-100" onclick="sortTable('kursi')">Total Kursi ↕</th>
+            <th class="px-3 py-2 text-left font-semibold">Partai Dominan</th>
+            <th class="px-3 py-2 text-center font-semibold cursor-pointer hover:bg-gray-100" onclick="sortTable('dominantKursi')">Kursi Dominan ↕</th>
+            <th class="px-3 py-2 text-center font-semibold">% Dominasi</th>
+            <th class="px-3 py-2 text-center font-semibold">Jumlah Partai</th>
+            <th class="px-3 py-2 text-center font-semibold">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="province-table-body" class="divide-y divide-gray-100"></tbody>
+      </table>
+    </div>
+    <div class="mt-3 text-xs text-gray-400">
+      * Klik header kolom untuk mengurutkan. Provinsi dengan warna merah muda adalah provinsi pemekaran Papua (tidak tersedia di peta GeoJSON).
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     MODAL ANGGOTA TERPILIH — PROFESSIONAL VIEW
+     ============================================= -->
+<div id="modal-anggota" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#f8fafc;width:100%;max-width:1400px;height:90vh;border-radius:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;position:relative;animation:modalFadeIn 0.3s ease-out">
+    
+    <!-- Modal Close Button (Top Right) -->
+    <button onclick="toggleAnggotaModal()" style="position:absolute;top:20px;right:24px;width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;z-index:10;transition:all 0.2s" onmouseover="this.style.background='#f1f5f9';this.style.color='#0f172a'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+      <svg style="width:20px;height:20px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+
+    <div style="padding:40px 40px 24px;flex-shrink:0">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;padding-right:60px">
+        <div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+            <div style="width:4px;height:36px;background:linear-gradient(180deg,#dc2626,#991b1b);border-radius:2px"></div>
+            <h2 style="font-size:1.75rem;font-weight:800;color:#0f172a;margin:0;letter-spacing:-0.5px">Daftar Anggota Terpilih 2024</h2>
+          </div>
+          <p style="color:#64748b;margin:0 0 0 16px;font-size:0.875rem">DPR RI &amp; DPRD Tingkat I — Pemilihan Legislatif 2024</p>
+        </div>
+        <div id="a-stat-strip" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div style="background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.07),0 8px 24px rgba(0,0,0,.04);padding:20px 24px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+        <!-- Search -->
+        <div style="flex:2;min-width:200px">
+          <label style="display:block;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Cari Nama</label>
+          <div style="position:relative">
+            <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#94a3b8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="a-search-name" type="text" placeholder="Ketik nama anggota…"
+              style="width:100%;padding:10px 12px 10px 36px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;box-sizing:border-box;transition:border .2s"
+              onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#e2e8f0'"
+              oninput="applyAnggotaFilters()">
+          </div>
+        </div>
+        <!-- Provinsi -->
+        <div style="flex:1;min-width:160px">
+          <label style="display:block;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Provinsi</label>
+          <select id="a-filter-provinsi" onchange="applyAnggotaFilters()"
+            style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;background:#fff;cursor:pointer;box-sizing:border-box">
+            <option value="">Semua Provinsi</option>
+          </select>
+        </div>
+        <!-- Tingkat -->
+        <div style="flex:1;min-width:140px">
+          <label style="display:block;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Tingkat</label>
+          <select id="a-filter-level" onchange="applyAnggotaFilters()"
+            style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;background:#fff;cursor:pointer;box-sizing:border-box">
+            <option value="">DPR RI &amp; DPRD</option>
+            <option value="DPR RI">DPR RI</option>
+            <option value="DPRD TK I">DPRD TK I</option>
+          </select>
+        </div>
+        <!-- Partai -->
+        <div style="flex:1;min-width:160px">
+          <label style="display:block;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Partai</label>
+          <select id="a-filter-partai" onchange="applyAnggotaFilters()"
+            style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;background:#fff;cursor:pointer;box-sizing:border-box">
+            <option value="">Semua Partai</option>
+          </select>
+        </div>
+        <!-- Reset -->
+        <div>
+          <button onclick="resetAnggotaFilters()"
+            style="padding:10px 18px;background:#f1f5f9;border:none;border-radius:10px;font-size:13px;font-weight:600;color:#475569;cursor:pointer;transition:background .2s"
+            onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+            ↺ Reset
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scrollable content area -->
+    <div id="anggota-modal-body" style="flex:1;overflow-y:auto;padding:0 40px 40px">
+      <!-- Result summary bar -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 4px">
+        <span id="a-filter-summary" style="font-size:13px;color:#64748b"></span>
+        <div id="a-pagination-top-controls" style="display:flex;gap:6px"></div>
+      </div>
+
+      <!-- Table -->
+      <div style="background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.07),0 8px 24px rgba(0,0,0,.04);overflow:hidden">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead>
+              <tr style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%)">
+                <th onclick="sortAnggotaBy('nama')" id="th-nama"
+                  style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;user-select:none">
+                  Nama ⇅
+                </th>
+                <th onclick="sortAnggotaBy('provinsi')" id="th-provinsi"
+                  style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;user-select:none">
+                  Provinsi ⇅
+                </th>
+                <th onclick="sortAnggotaBy('dapil')"
+                  style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;user-select:none">
+                  Dapil ⇅
+                </th>
+                <th onclick="sortAnggotaBy('partai')"
+                  style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;user-select:none">
+                  Partai ⇅
+                </th>
+                <th onclick="sortAnggotaBy('level')"
+                  style="padding:14px 12px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;user-select:none">
+                  Tingkat ⇅
+                </th>
+                <th onclick="sortAnggotaBy('suara')"
+                  style="padding:14px 16px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;user-select:none">
+                  Perolehan Suara ⇅
+                </th>
+              </tr>
+            </thead>
+            <tbody id="a-members-table-body" style="divide-y:#f1f5f9"></tbody>
+          </table>
+        </div>
+        <!-- Pagination footer -->
+        <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f5f9;background:#fafafa">
+          <span id="a-pagination-info" style="font-size:12px;color:#94a3b8"></span>
+          <div id="a-pagination-controls" style="display:flex;gap:6px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+</style>
+
+<!-- Footer -->
+<div style="background:#0f172a;color:#94a3b8;padding:24px;text-align:center;font-size:13px">
+  <p style="margin:0">Data: Pemilu Legislatif 2024 | Sumber: KPU RI (SK 1206/2024 &amp; SK 1309/2024)</p>
+  <p style="margin:6px 0 0;font-size:11px;opacity:0.5">Dashboard ini dibuat untuk keperluan riset dan analisis politik menuju Pilpres 2029</p>
+</div>
+
+<script src="indonesia_geojson.js"></script>
+<script src="data_dashboard.js"></script>
+<script src="anggota.js"></script>
+<script>
+let currentLevel = 'DPR_RI';
+let map, geoJsonLayer;
+let chartNational, chartTopParties, chartProvincePie, chartCompare, chartVoteCompare;
+let tableSort = { col: 'kursi', dir: -1 };
+
+const geoToDataMap = {
+  'Aceh': 'Aceh',
+  'Sumatera Barat': 'Sumatera Barat',
+  'Yogyakarta': 'DI Yogyakarta',
+  'Sumatera Utara': 'Sumatera Utara',
+  'Bangka-Belitung': 'Kepulauan Bangka Belitung',
+  'Papua Barat': 'Papua Barat',
+  'Jawa Timur': 'Jawa Timur',
+  'Kalimantan Barat': 'Kalimantan Barat',
+  'Kalimantan Selatan': 'Kalimantan Selatan',
+  'Kalimantan Timur': 'Kalimantan Timur',
+  'Kepulauan Riau': 'Kepulauan Riau',
+  'Lampung': 'Lampung',
+  'Maluku': 'Maluku',
+  'Maluku Utara': 'Maluku Utara',
+  'Nusa Tenggara Barat': 'Nusa Tenggara Barat',
+  'Nusa Tenggara Timur': 'Nusa Tenggara Timur',
+  'Papua': 'Papua',
+  'Riau': 'Riau',
+  'Sulawesi Selatan': 'Sulawesi Selatan',
+  'Bengkulu': 'Bengkulu',
+  'Sulawesi Tengah': 'Sulawesi Tengah',
+  'Sulawesi Utara': 'Sulawesi Utara',
+  'Sulawesi Tenggara': 'Sulawesi Tenggara',
+  'Bali': 'Bali',
+  'Banten': 'Banten',
+  'Gorontalo': 'Gorontalo',
+  'Jakarta Raya': 'DKI Jakarta',
+  'Jambi': 'Jambi',
+  'Jawa Barat': 'Jawa Barat',
+  'Jawa Tengah': 'Jawa Tengah',
+  'Kalimantan Tengah': 'Kalimantan Tengah',
+  'Sulawesi Barat': 'Sulawesi Barat',
+  'Sumatera Selatan': 'Sumatera Selatan',
+  'Kalimantan Utara': 'Kalimantan Utara',
+};
+
+const dataToGeoMap = {};
+for (const [geo, data] of Object.entries(geoToDataMap)) {
+  dataToGeoMap[data] = geo;
+}
+
+// Provinces not in GeoJSON (Papua expansion)
+const notInGeoJSON = ['Papua Selatan', 'Papua Tengah', 'Papua Pegunungan', 'Papua Barat Daya'];
+
+function getPartyColor(party) {
+  return partyColors[party] || '#9CA3AF';
+}
+
+function getDominantParty(prov, level) {
+  const parties = indonesiaData[prov]?.[level] || {};
+  if (Object.keys(parties).length === 0) return { party: 'Tidak ada data', kursi: 0, total: 0 };
+  const sorted = Object.entries(parties).sort((a, b) => b[1].kursi - a[1].kursi);
+  const total = sorted.reduce((sum, [, v]) => sum + v.kursi, 0);
+  return { party: sorted[0][0], kursi: sorted[0][1].kursi, total };
+}
+
+function getAllPartiesByLevel(level) {
+  const agg = {};
+  for (const prov of Object.keys(indonesiaData)) {
+    const parties = indonesiaData[prov][level];
+    for (const [party, vals] of Object.entries(parties)) {
+      if (!agg[party]) agg[party] = { kursi: 0, suara: 0 };
+      agg[party].kursi += vals.kursi;
+      agg[party].suara += vals.suara;
+    }
+  }
+  return agg;
+}
+
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([-2.5, 118], 5);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 10,
+    minZoom: 4
+  }).addTo(map);
+
+  // GeoJSON loaded via <script src="indonesia_geojson.js">
+  geoJsonLayer = L.geoJson(indonesiaGeoJSON, {
+    style: styleFeature,
+    onEachFeature: onEachFeature
+  }).addTo(map);
+}
+
+function styleFeature(feature) {
+  const geoName = feature.properties.state;
+  const dataName = geoToDataMap[geoName];
+  const dom = getDominantParty(dataName, currentLevel);
+  const color = getPartyColor(dom.party);
+  return {
+    fillColor: color,
+    weight: 1.2,
+    opacity: 1,
+    color: '#ffffff',
+    dashArray: '',
+    fillOpacity: 0.78
+  };
+}
+
+function onEachFeature(feature, layer) {
+  const geoName = feature.properties.state;
+  const dataName = geoToDataMap[geoName];
+  const dom = getDominantParty(dataName, currentLevel);
+  const total = dom.total;
+  const pct = total > 0 ? ((dom.kursi / total) * 100).toFixed(1) : 0;
+
+  const popupContent = `
+    <div style="font-family:sans-serif;min-width:220px">
+      <h3 style="margin:0 0 10px;font-size:15px;font-weight:800;border-bottom:2px solid #f3f4f6;padding-bottom:6px">${dataName}</h3>
+      <div style="font-size:13px;line-height:1.6">
+        <div style="margin-bottom:6px"><strong>Partai Dominan:</strong></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;background:#f9fafb;padding:6px 8px;border-radius:6px">
+          <div style="width:14px;height:14px;border-radius:4px;background:${getPartyColor(dom.party)};flex-shrink:0"></div>
+          <span style="font-weight:600">${dom.party}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Kursi dominan:</span><strong>${dom.kursi}</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Persentase:</span><strong>${pct}%</strong></div>
+        <div style="display:flex;justify-content:space-between"><span>Total kursi:</span><strong>${total}</strong></div>
+      </div>
+      <div style="margin-top:10px;text-align:center">
+        <button onclick="window.showProvinceDetailGlobal('${dataName}')" style="background:#dc2626;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">Lihat Detail →</button>
+      </div>
+    </div>
+  `;
+
+  layer.bindPopup(popupContent);
+  layer.on({
+    mouseover: highlightFeature,
+    mouseout: resetHighlight,
+    click: () => showProvinceDetail(dataName)
+  });
+}
+
+function highlightFeature(e) {
+  const layer = e.target;
+  layer.setStyle({ weight: 2.5, color: '#1f2937', fillOpacity: 0.92 });
+  if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) layer.bringToFront();
+}
+
+function resetHighlight(e) {
+  geoJsonLayer.resetStyle(e.target);
+}
+
+function updateMap() {
+  if (geoJsonLayer) {
+    geoJsonLayer.eachLayer(layer => {
+      const geoName = layer.feature.properties.state;
+      const dataName = geoToDataMap[geoName];
+      const dom = getDominantParty(dataName, currentLevel);
+      const color = getPartyColor(dom.party);
+      layer.setStyle({ fillColor: color });
+      const total = dom.total;
+      const pct = total > 0 ? ((dom.kursi / total) * 100).toFixed(1) : 0;
+      layer.setPopupContent(`
+        <div style="font-family:sans-serif;min-width:220px">
+          <h3 style="margin:0 0 10px;font-size:15px;font-weight:800;border-bottom:2px solid #f3f4f6;padding-bottom:6px">${dataName}</h3>
+          <div style="font-size:13px;line-height:1.6">
+            <div style="margin-bottom:6px"><strong>Partai Dominan:</strong></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;background:#f9fafb;padding:6px 8px;border-radius:6px">
+              <div style="width:14px;height:14px;border-radius:4px;background:${color};flex-shrink:0"></div>
+              <span style="font-weight:600">${dom.party}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Kursi dominan:</span><strong>${dom.kursi}</strong></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Persentase:</span><strong>${pct}%</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>Total kursi:</span><strong>${total}</strong></div>
+          </div>
+          <div style="margin-top:10px;text-align:center">
+            <button onclick="window.showProvinceDetailGlobal('${dataName}')" style="background:#dc2626;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">Lihat Detail →</button>
+          </div>
+        </div>
+      `);
+    });
+  }
+}
+
+function updateStats() {
+  const agg = getAllPartiesByLevel(currentLevel);
+  const totalKursi = Object.values(agg).reduce((s, v) => s + v.kursi, 0);
+  const sorted = Object.entries(agg).sort((a, b) => b[1].kursi - a[1].kursi);
+  const topParty = sorted.length > 0 ? sorted[0][0] : '-';
+
+  // Most competitive = province where dominant party has lowest share
+  let mostComp = '-';
+  let lowestPct = 101;
+  for (const prov of Object.keys(indonesiaData)) {
+    const dom = getDominantParty(prov, currentLevel);
+    if (dom.total > 0) {
+      const pct = (dom.kursi / dom.total) * 100;
+      if (pct < lowestPct) {
+        lowestPct = pct;
+        mostComp = prov;
+      }
+    }
+  }
+
+  document.getElementById('stat-total-kursi').textContent = totalKursi.toLocaleString('id-ID');
+  document.getElementById('stat-top-party').textContent = topParty;
+  document.getElementById('stat-partai-count').textContent = sorted.length;
+  document.getElementById('stat-competitive').textContent = mostComp;
+}
+
+function updateLegend() {
+  const agg = getAllPartiesByLevel(currentLevel);
+  const sorted = Object.entries(agg).sort((a, b) => b[1].kursi - a[1].kursi);
+  const container = document.getElementById('legend-container');
+  container.innerHTML = '';
+  let rank = 1;
+  for (const [party, vals] of sorted) {
+    const div = document.createElement('div');
+    div.className = 'party-legend';
+    div.innerHTML = `
+      <div class="text-xs font-bold text-gray-400 w-5 text-right">${rank}</div>
+      <div class="color-box" style="background:${getPartyColor(party)}"></div>
+      <div class="flex-1 truncate">${party}</div>
+      <div class="font-bold text-xs text-gray-700">${vals.kursi.toLocaleString('id-ID')}</div>
+    `;
+    container.appendChild(div);
+    rank++;
+  }
+}
+
+function updateTopProvinces() {
+  const provs = Object.keys(indonesiaData).map(prov => {
+    const parties = indonesiaData[prov][currentLevel];
+    const total = Object.values(parties).reduce((s, v) => s + v.kursi, 0);
+    const dom = getDominantParty(prov, currentLevel);
+    return { prov, total, dom };
+  }).sort((a, b) => b.total - a.total);
+
+  const container = document.getElementById('top-provinces');
+  container.innerHTML = '';
+  for (let i = 0; i < Math.min(10, provs.length); i++) {
+    const item = provs[i];
+    const isNew = notInGeoJSON.includes(item.prov);
+    const div = document.createElement('div');
+    div.className = 'flex items-center justify-between bg-gray-50 rounded-lg p-2 hover:bg-red-50 transition cursor-pointer';
+    div.innerHTML = `
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="text-xs font-bold text-gray-400 w-5 text-center">${i+1}</div>
+        <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${getPartyColor(item.dom.party)}"></div>
+        <div class="min-w-0">
+          <div class="font-semibold text-sm truncate">${item.prov} ${isNew ? '<span class="text-[10px] bg-orange-100 text-orange-700 px-1 rounded ml-1">baru</span>' : ''}</div>
+          <div class="text-xs text-gray-500 truncate">${item.dom.party}</div>
+        </div>
+      </div>
+      <div class="text-right flex-shrink-0">
+        <div class="font-bold text-sm">${item.total}</div>
+        <div class="text-[10px] text-gray-400">kursi</div>
+      </div>
+    `;
+    div.onclick = () => showProvinceDetail(item.prov);
+    container.appendChild(div);
+  }
+}
+
+function updateCharts() {
+  const agg = getAllPartiesByLevel(currentLevel);
+  const sorted = Object.entries(agg).sort((a, b) => b[1].kursi - a[1].kursi);
+
+  const ctx1 = document.getElementById('chart-national').getContext('2d');
+  if (chartNational) chartNational.destroy();
+  chartNational = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: sorted.map(x => x[0]),
+      datasets: [{
+        data: sorted.map(x => x[1].kursi),
+        backgroundColor: sorted.map(x => getPartyColor(x[0]))
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 }, padding: 8 } }
+      }
+    }
+  });
+
+  const top12 = sorted.slice(0, 12);
+  const ctx2 = document.getElementById('chart-top-parties').getContext('2d');
+  if (chartTopParties) chartTopParties.destroy();
+  chartTopParties = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: top12.map(x => x[0]),
+      datasets: [{
+        label: 'Jumlah Kursi',
+        data: top12.map(x => x[1].kursi),
+        backgroundColor: top12.map(x => getPartyColor(x[0])),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, grid: { display: false } }, y: { grid: { display: false } } }
+    }
+  });
+}
+
+function showProvinceDetail(prov) {
+  const detail = document.getElementById('province-detail');
+  detail.classList.remove('hidden');
+  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  document.getElementById('detail-province-name').textContent = prov;
+  document.getElementById('detail-level').textContent = currentLevel === 'DPR_RI' ? 'Dewan Perwakilan Rakyat Republik Indonesia (DPR RI)' : 'Dewan Perwakilan Rakyat Daerah Tingkat I (DPRD TK I)';
+
+  const parties = indonesiaData[prov]?.[currentLevel] || {};
+  const sorted = Object.entries(parties).sort((a, b) => b[1].kursi - a[1].kursi);
+  const total = sorted.reduce((s, [, v]) => s + v.kursi, 0);
+  const dom = getDominantParty(prov, currentLevel);
+
+  document.getElementById('detail-total-kursi').textContent = total;
+  document.getElementById('detail-dominant-party').textContent = dom.party;
+  document.getElementById('detail-dominant-kursi').textContent = dom.kursi;
+  document.getElementById('detail-party-count').textContent = sorted.length;
+
+  updateCompareChart(prov);
+
+  const ctx = document.getElementById('chart-province-pie').getContext('2d');
+  if (chartProvincePie) chartProvincePie.destroy();
+  chartProvincePie = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: sorted.map(x => x[0]),
+      datasets: [{
+        data: sorted.map(x => x[1].kursi),
+        backgroundColor: sorted.map(x => getPartyColor(x[0]))
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: { display: true, text: 'Distribusi Kursi' },
+        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }
+      }
+    }
+  });
+
+  const list = document.getElementById('detail-party-list');
+  list.innerHTML = '';
+  for (const [party, vals] of sorted) {
+    const pct = total > 0 ? ((vals.kursi / total) * 100).toFixed(1) : 0;
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50';
+    div.innerHTML = `
+      <div class="w-3 h-3 rounded flex-shrink-0" style="background:${getPartyColor(party)}"></div>
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between text-sm">
+          <span class="font-medium truncate">${party}</span>
+          <span class="font-bold text-gray-700">${vals.kursi} kursi (${pct}%)</span>
+        </div>
+        <div class="w-full bg-red-50 rounded-full h-2 mt-1">
+          <div class="h-2 rounded-full transition-all shadow-[0_0_8px_rgba(220,38,38,0.2)]" style="width:${pct}%;background:${getPartyColor(party)}"></div>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+
+  // Fill vote comparison table for this province
+  const voteBody = document.getElementById('detail-vote-compare-body');
+  voteBody.innerHTML = '';
+  const dprParties = indonesiaData[prov]['DPR_RI'];
+  const dprdParties = indonesiaData[prov]['DPRD_TK1'];
+  const allParties = new Set([...Object.keys(dprParties), ...Object.keys(dprdParties)]);
+  const voteRows = Array.from(allParties).map(party => {
+    const dprSuara = dprParties[party]?.suara || 0;
+    const dprdSuara = dprdParties[party]?.suara || 0;
+    const dprKursi = dprParties[party]?.kursi || 0;
+    const dprdKursi = dprdParties[party]?.kursi || 0;
+    const selisih = dprSuara - dprdSuara;
+    const pctSelisih = (dprSuara + dprdSuara) > 0 ? ((selisih / (dprSuara + dprdSuara)) * 100).toFixed(1) : 0;
+    return { party, dprSuara, dprdSuara, selisih, pctSelisih, dprKursi, dprdKursi, totalSuara: dprSuara + dprdSuara };
+  }).sort((a, b) => b.totalSuara - a.totalSuara);
+
+  for (const row of voteRows) {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-gray-50';
+    const atensi = Math.abs(row.pctSelisih) > 50 ? '🔴 Tinggi' : Math.abs(row.pctSelisih) > 20 ? '🟠 Sedang' : '🟢 Rendah';
+    const atensiClass = Math.abs(row.pctSelisih) > 50 ? 'bg-red-100 text-red-700' : Math.abs(row.pctSelisih) > 20 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700';
+    tr.innerHTML = `
+      <td class="px-3 py-2">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded" style="background:${getPartyColor(row.party)}"></div>
+          <span class="font-medium">${row.party}</span>
+        </div>
+      </td>
+      <td class="px-3 py-2 text-right">${row.dprSuara.toLocaleString('id-ID')}</td>
+      <td class="px-3 py-2 text-right">${row.dprdSuara.toLocaleString('id-ID')}</td>
+      <td class="px-3 py-2 text-right font-bold ${row.selisih > 0 ? 'text-red-600' : row.selisih < 0 ? 'text-blue-600' : 'text-gray-500'}">${(row.selisih > 0 ? '+' : '') + row.selisih.toLocaleString('id-ID')}</td>
+      <td class="px-3 py-2 text-right font-semibold">${(row.selisih > 0 ? '+' : '') + row.pctSelisih}%</td>
+      <td class="px-3 py-2 text-center font-semibold">${row.dprKursi}</td>
+      <td class="px-3 py-2 text-center font-semibold">${row.dprdKursi}</td>
+      <td class="px-3 py-2 text-center"><span class="text-xs font-bold px-2 py-1 rounded-full ${atensiClass}">${atensi}</span></td>
+    `;
+    voteBody.appendChild(tr);
+  }
+}
+window.showProvinceDetailGlobal = showProvinceDetail;
+
+function updateVoteComparison() {
+  // Aggregate votes by party across all provinces
+  const agg = {};
+  for (const prov of Object.keys(indonesiaData)) {
+    for (const level of ['DPR_RI', 'DPRD_TK1']) {
+      const parties = indonesiaData[prov][level];
+      for (const [party, vals] of Object.entries(parties)) {
+        if (!agg[party]) agg[party] = { dpr_suara: 0, dprd_suara: 0, dpr_kursi: 0, dprd_kursi: 0 };
+        if (level === 'DPR_RI') {
+          agg[party].dpr_suara += vals.suara;
+          agg[party].dpr_kursi += vals.kursi;
+        } else {
+          agg[party].dprd_suara += vals.suara;
+          agg[party].dprd_kursi += vals.kursi;
+        }
+      }
+    }
+  }
+
+  // Sort by total votes
+  const sorted = Object.entries(agg).sort((a, b) => (b[1].dpr_suara + b[1].dprd_suara) - (a[1].dpr_suara + a[1].dprd_suara));
+
+  // Fill table
+  const tbody = document.getElementById('vote-compare-table-body');
+  tbody.innerHTML = '';
+  for (const [party, vals] of sorted.slice(0, 15)) {
+    const selisih = vals.dpr_suara - vals.dprd_suara;
+    const trend = selisih > 0 ? '▲ DPR' : selisih < 0 ? '▼ DPRD' : '● Sama';
+    const trendColor = selisih > 0 ? 'text-red-600' : selisih < 0 ? 'text-blue-600' : 'text-gray-500';
+    const row = document.createElement('tr');
+    row.className = 'hover:bg-gray-50';
+    row.innerHTML = `
+      <td class="px-2 py-2">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded" style="background:${getPartyColor(party)}"></div>
+          <span class="font-medium">${party}</span>
+        </div>
+      </td>
+      <td class="px-2 py-2 text-right font-semibold">${vals.dpr_suara.toLocaleString('id-ID')}</td>
+      <td class="px-2 py-2 text-right font-semibold">${vals.dprd_suara.toLocaleString('id-ID')}</td>
+      <td class="px-2 py-2 text-right ${selisih > 0 ? 'text-red-600' : selisih < 0 ? 'text-blue-600' : 'text-gray-500'} font-bold">${(selisih > 0 ? '+' : '') + selisih.toLocaleString('id-ID')}</td>
+      <td class="px-2 py-2 text-center font-bold ${trendColor}">${trend}</td>
+    `;
+    tbody.appendChild(row);
+  }
+
+  // Chart
+  const top12 = sorted.slice(0, 12);
+  const ctx = document.getElementById('chart-vote-compare').getContext('2d');
+  if (chartVoteCompare) chartVoteCompare.destroy();
+  chartVoteCompare = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top12.map(x => x[0]),
+      datasets: [
+        { label: 'Suara DPR RI', data: top12.map(x => x[1].dpr_suara), backgroundColor: '#dc2626', borderRadius: 4 },
+        { label: 'Suara DPRD TK I', data: top12.map(x => x[1].dprd_suara), backgroundColor: '#fca5a5', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#f3f4f6' } } }
+    }
+  });
+}
+
+function updateCompareChart(prov) {
+  const dpr = indonesiaData[prov]['DPR_RI'];
+  const dprd = indonesiaData[prov]['DPRD_TK1'];
+  const allParties = new Set([...Object.keys(dpr), ...Object.keys(dprd)]);
+  const sortedParties = Array.from(allParties).sort((a, b) => {
+    const ka = (dpr[a]?.kursi || 0) + (dprd[a]?.kursi || 0);
+    const kb = (dpr[b]?.kursi || 0) + (dprd[b]?.kursi || 0);
+    return kb - ka;
+  }).slice(0, 10);
+
+  const ctx = document.getElementById('chart-compare').getContext('2d');
+  if (chartCompare) chartCompare.destroy();
+  chartCompare = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sortedParties,
+      datasets: [
+        { label: 'DPR RI', data: sortedParties.map(p => dpr[p]?.kursi || 0), backgroundColor: '#dc2626', borderRadius: 4 },
+        { label: 'DPRD TK I', data: sortedParties.map(p => dprd[p]?.kursi || 0), backgroundColor: '#fca5a5', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#f3f4f6' } } }
+    }
+  });
+}
+
+function closeDetail() {
+  document.getElementById('province-detail').classList.add('hidden');
+}
+
+function updateTable() {
+  const tbody = document.getElementById('province-table-body');
+  tbody.innerHTML = '';
+
+  const rows = Object.keys(indonesiaData).map(prov => {
+    const parties = indonesiaData[prov][currentLevel];
+    const total = Object.values(parties).reduce((s, v) => s + v.kursi, 0);
+    const dom = getDominantParty(prov, currentLevel);
+    const pct = total > 0 ? ((dom.kursi / total) * 100).toFixed(1) : 0;
+    const numParties = Object.keys(parties).length;
+    const isNew = notInGeoJSON.includes(prov);
+    return { prov, total, dom, pct, numParties, isNew };
+  });
+
+  rows.sort((a, b) => {
+    let av, bv;
+    switch (tableSort.col) {
+      case 'name': av = a.prov; bv = b.prov; break;
+      case 'kursi': av = a.total; bv = b.total; break;
+      case 'dominantKursi': av = a.dom.kursi; bv = b.dom.kursi; break;
+      default: av = a.total; bv = b.total;
+    }
+    if (typeof av === 'string') return tableSort.dir * av.localeCompare(bv);
+    return tableSort.dir * (av - bv);
+  });
+
+  for (const row of rows) {
+    const tr = document.createElement('tr');
+    tr.className = 'province-row' + (row.isNew ? ' bg-orange-50/50' : '');
+    tr.innerHTML = `
+      <td class="px-3 py-2 font-medium text-gray-800">
+        ${row.prov}
+        ${row.isNew ? '<span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full ml-1">Pemekaran</span>' : ''}
+      </td>
+      <td class="px-3 py-2 text-center font-bold">${row.total}</td>
+      <td class="px-3 py-2">
+        <div class="flex items-center gap-1.5">
+          <div class="w-2.5 h-2.5 rounded" style="background:${getPartyColor(row.dom.party)}"></div>
+          <span class="text-gray-700">${row.dom.party}</span>
+        </div>
+      </td>
+      <td class="px-3 py-2 text-center font-semibold">${row.dom.kursi}</td>
+      <td class="px-3 py-2 text-center">
+        <div class="flex items-center gap-2">
+          <div class="flex-1 bg-gray-200 rounded-full h-1.5">
+            <div class="h-1.5 rounded-full" style="width:${row.pct}%;background:${getPartyColor(row.dom.party)}"></div>
+          </div>
+          <span class="text-xs font-medium w-10 text-right">${row.pct}%</span>
+        </div>
+      </td>
+      <td class="px-3 py-2 text-center text-gray-600">${row.numParties}</td>
+      <td class="px-3 py-2 text-center">
+        <button onclick="showProvinceDetail('${row.prov}')" class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition">Detail</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function sortTable(col) {
+  if (tableSort.col === col) tableSort.dir *= -1;
+  else { tableSort.col = col; tableSort.dir = -1; }
+  updateTable();
+}
+
+function setLevel(level) {
+  currentLevel = level;
+  const title = level === 'DPR_RI' ? 'Peta Dominasi Partai - DPR RI' : 'Peta Dominasi Partai - DPRD TK I';
+  document.getElementById('map-title').textContent = title;
+
+  const btnDpr = document.getElementById('btn-dpr');
+  const btnDprd = document.getElementById('btn-dprd');
+  const activeClass = 'bg-white text-red-700 shadow-md scale-105';
+  const inactiveClass = 'text-white/80 hover:bg-white/10 hover:text-white';
+  
+  if (level === 'DPR_RI') {
+    btnDpr.className = `px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeClass}`;
+    btnDprd.className = `px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${inactiveClass}`;
+  } else {
+    btnDpr.className = `px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${inactiveClass}`;
+    btnDprd.className = `px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeClass}`;
+  }
+  // Also update compare chart if detail is open
+  if (!document.getElementById('province-detail').classList.contains('hidden')) {
+    const prov = document.getElementById('detail-province-name').textContent;
+    if (indonesiaData[prov]) updateCompareChart(prov);
+  }
+
+  updateMap();
+  updateStats();
+  updateLegend();
+  updateTopProvinces();
+  updateCharts();
+  updateTable();
+  updateVoteComparison();
+}
+
+// Init
+initMap();
+setLevel('DPR_RI');
+updateVoteComparison();
+</script>
+
+<script>
+// =============================================
+// ANGGOTA SECTION LOGIC — PROFESSIONAL
+// =============================================
+let anggotaCurrentPage = 1;
+const ANGGOTA_PER_PAGE = 25;
+let anggotaFiltered = [];
+let anggotaSortCol = 'suara';
+let anggotaSortDir = -1;
+
+/**
+ * Initializes the Member section: stats, dropdowns, and data.
+ */
+function initAnggota() {
+  if (typeof membersData === 'undefined') {
+    console.error("membersData not found");
+    return;
+  }
+
+  // Populate filter dropdowns
+  const provs = [...new Set(membersData.map(m => m.provinsi))].sort();
+  const selProv = document.getElementById('a-filter-provinsi');
+  if (selProv) {
+    provs.forEach(p => {
+      const o = document.createElement('option'); o.value = p; o.textContent = p;
+      selProv.appendChild(o);
+    });
+  }
+
+  const parties = [...new Set(membersData.map(m => m.partai))].sort();
+  const selPartai = document.getElementById('a-filter-partai');
+  if (selPartai) {
+    parties.forEach(p => {
+      const o = document.createElement('option'); o.value = p; o.textContent = p;
+      selPartai.appendChild(o);
+    });
+  }
+
+  applyAnggotaFilters();
+}
+
+/**
+ * Creates and updates the stat chips at the top of the section.
+ */
+function updateAnggotaStats() {
+  const total = membersData.length;
+  const dpr = membersData.filter(m => m.level === 'DPR RI').length;
+  const dprd = total - dpr;
+  const filtered = anggotaFiltered.length;
+
+  const container = document.getElementById('a-stat-strip');
+  if (!container) return;
+
+  const makeChip = (label, val, color) => `
+    <div style="background:#fff;border:1px solid #fee2e2;border-radius:12px;padding:8px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 6px -1px rgba(220,38,38,0.05)">
+      <div style="width:10px;height:10px;border-radius:3px;background:${color};box-shadow:0 0 8px ${color}66"></div>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;line-height:1">${label}</span>
+        <span style="font-size:18px;font-weight:800;color:#0f172a">${val.toLocaleString('id-ID')}</span>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = 
+    makeChip('Total Anggota', total, '#dc2626') +
+    makeChip('DPR RI', dpr, '#b91c1c') +
+    makeChip('DPRD TK I', dprd, '#dc2626') +
+    (filtered !== total ? makeChip('Ditampilkan', filtered, '#10b981') : '');
+}
+
+/**
+ * Filters the membersData array based on UI inputs.
+ */
+function applyAnggotaFilters() {
+  const nameInput = document.getElementById('a-search-name');
+  const provInput = document.getElementById('a-filter-provinsi');
+  const levelInput = document.getElementById('a-filter-level');
+  const partaiInput = document.getElementById('a-filter-partai');
+
+  if (!nameInput) return;
+
+  const nameQ = nameInput.value.toLowerCase();
+  const provQ = provInput.value;
+  const levelQ = levelInput.value;
+  const partaiQ = partaiInput.value;
+
+  anggotaFiltered = membersData.filter(m => {
+    if (nameQ && !m.nama.toLowerCase().includes(nameQ)) return false;
+    if (provQ && m.provinsi !== provQ) return false;
+    if (levelQ && m.level !== levelQ) return false;
+    if (partaiQ && m.partai !== partaiQ) return false;
+    return true;
+  });
+
+  updateAnggotaStats();
+  anggotaSortAndRender();
+
+  const summary = document.getElementById('a-filter-summary');
+  if (summary) {
+    summary.innerHTML = `Ditemukan <b>${anggotaFiltered.length.toLocaleString('id-ID')}</b> anggota`;
+  }
+}
+
+/**
+ * Resets all filter inputs.
+ */
+function resetAnggotaFilters() {
+  document.getElementById('a-search-name').value = '';
+  document.getElementById('a-filter-provinsi').value = '';
+  document.getElementById('a-filter-level').value = '';
+  document.getElementById('a-filter-partai').value = '';
+  applyAnggotaFilters();
+}
+
+/**
+ * Handles column sorting.
+ */
+function sortAnggotaBy(col) {
+  if (anggotaSortCol === col) {
+    anggotaSortDir *= -1;
+  } else {
+    anggotaSortCol = col;
+    anggotaSortDir = (col === 'suara' ? -1 : 1);
+  }
+  anggotaSortAndRender();
+}
+
+function anggotaSortAndRender() {
+  anggotaFiltered.sort((a, b) => {
+    let av = a[anggotaSortCol], bv = b[anggotaSortCol];
+    if (typeof av === 'string') return anggotaSortDir * av.localeCompare(bv);
+    return anggotaSortDir * (av - bv);
+  });
+  anggotaCurrentPage = 1;
+  renderAnggotaTable();
+}
+
+/**
+ * Renders the table body and pagination based on current state.
+ */
+function renderAnggotaTable() {
+  const start = (anggotaCurrentPage - 1) * ANGGOTA_PER_PAGE;
+  const pageData = anggotaFiltered.slice(start, start + ANGGOTA_PER_PAGE);
+  const tbody = document.getElementById('a-members-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (pageData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:48px;text-align:center;color:#94a3b8;font-style:italic">Tidak ada data anggota yang ditemukan</td></tr>';
+  } else {
+    pageData.forEach((m) => {
+      const pColor = (typeof partyColors !== 'undefined' && partyColors[m.partai]) ? partyColors[m.partai] : '#94a3b8';
+      const isDpr = m.level === 'DPR RI';
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #f1f5f9';
+      tr.style.transition = 'background 0.2s';
+      tr.onmouseover = () => tr.style.background = '#f8fafc';
+      tr.onmouseout = () => tr.style.background = 'transparent';
+      
+      tr.innerHTML = `
+        <td style="padding:12px 16px">
+          <div style="font-weight:700;color:#0f172a">${m.nama}</div>
+        </td>
+        <td style="padding:12px 16px;color:#475569">${m.provinsi}</td>
+        <td style="padding:12px 16px;color:#64748b;font-size:12px">${m.dapil}</td>
+        <td style="padding:12px 16px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:10px;height:10px;border-radius:3px;background:${pColor};flex-shrink:0"></div>
+            <span style="color:#334155;font-weight:500;font-size:13px">${m.partai}</span>
+          </div>
+        </td>
+        <td style="padding:12px 12px;text-align:center">
+          <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:0.02em;background:${isDpr ? '#fef2f2' : '#eff6ff'};color:${isDpr ? '#991b1b' : '#1d4ed8'}">${m.level}</span>
+        </td>
+        <td style="padding:12px 16px;text-align:right;font-family:monospace;font-weight:700;color:#1e293b">${m.suara.toLocaleString('id-ID')}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Update Pagination Info
+  const total = anggotaFiltered.length;
+  const endIdx = Math.min(start + ANGGOTA_PER_PAGE, total);
+  const infoEl = document.getElementById('a-pagination-info');
+  if (infoEl) {
+    infoEl.innerHTML = total > 0 
+      ? `Menampilkan <b>${(start + 1).toLocaleString('id-ID')}–${endIdx.toLocaleString('id-ID')}</b> dari <b>${total.toLocaleString('id-ID')}</b>`
+      : '';
+  }
+
+  renderPaginationControls(total);
+}
+
+function toggleAnggotaModal() {
+  const modal = document.getElementById('modal-anggota');
+  if (modal.style.display === 'none' || modal.style.display === '') {
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
+  } else {
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+}
+
+function renderPaginationControls(totalCount) {
+  const totalPages = Math.ceil(totalCount / ANGGOTA_PER_PAGE);
+  const container = document.getElementById('a-pagination-controls');
+  const topContainer = document.getElementById('a-pagination-top-controls');
+  if (!container || !topContainer) return;
+  
+  container.innerHTML = '';
+  topContainer.innerHTML = '';
+
+  if (totalPages <= 1) return;
+
+  const btnStyle = "padding:6px 10px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;transition:all 0.2s";
+  const activeStyle = "background:#0f172a;color:#fff;border-color:#0f172a";
+
+  const createBtn = (label, targetPage, active = false) => {
+    const b = document.createElement('button');
+    b.innerHTML = label;
+    b.style.cssText = btnStyle + (active ? ';' + activeStyle : '');
+    b.onclick = () => {
+      anggotaCurrentPage = targetPage;
+      renderAnggotaTable();
+      const scrollBody = document.getElementById('anggota-modal-body');
+      if (scrollBody) scrollBody.scrollTop = 0;
+    };
+    return b;
+  };
+
+  // Prev
+  if (anggotaCurrentPage > 1) {
+    container.appendChild(createBtn('← Prev', anggotaCurrentPage - 1));
+    topContainer.appendChild(createBtn('←', anggotaCurrentPage - 1));
+  }
+
+  // Page Numbers
+  let startPage = Math.max(1, anggotaCurrentPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+  for (let i = startPage; i <= endPage; i++) {
+    container.appendChild(createBtn(i, i, i === anggotaCurrentPage));
+  }
+
+  // Next
+  if (anggotaCurrentPage < totalPages) {
+    container.appendChild(createBtn('Next →', anggotaCurrentPage + 1));
+    topContainer.appendChild(createBtn('→', anggotaCurrentPage + 1));
+  }
+}
+
+// Start logic
+initAnggota();
+</script>
+</body>
+</html>
