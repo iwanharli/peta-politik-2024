@@ -1,0 +1,17 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# rahasia
+.env
+.env.*
+!.env.example
+
+# dependensi & build
+node_modules/
+dist/
+
+# log
+*.log
